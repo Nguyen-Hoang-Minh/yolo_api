@@ -6,6 +6,9 @@ from ultralytics.utils.plotting import Annotator
 import os
 import argparse
 import socket
+import base64
+import io
+from io import BytesIO
 from PIL import Image
 
 model = YOLO('yolov8n-seg.pt')
@@ -27,11 +30,37 @@ def test():
     address = socket.gethostbyname(socket.gethostname())
     return {"data": address}
 
+def decode_image(request):
+  """
+  Decodes the base64 encoded image data from the request body.
+
+  Args:
+    request: The HTTP request object.
+
+  Returns:
+    A PIL Image object containing the decoded image data.
+  """
+  image_data = request.form.get('image')
+  if image_data is None:
+    raise Exception('Missing image data in request')
+  image_bytes = base64.b64decode(image_data)
+  image_stream = BytesIO(image_bytes)
+  image = Image.open(image_stream)
+  return image
+
 @app.route("/predict", methods=['POST'])
 def predict():
-    file = request.files['image']
-    img = Image.open(file.stream)
-    results = model.predict(img)
+    # Decode the image data
+    image = decode_image(request)
+    # Get the encoded image from the request
+    # encoded_image = request.files['image'].read()
+
+    # Decode the image
+    # image_bytes = base64.b64decode(encoded_image)
+    # image = Image.open(io.BytesIO(image_bytes))
+    #file = request.files['image']
+    # img = Image.open(image_data.stream)
+    results = model.predict(image)
     return results[0].tojson()
 
 
